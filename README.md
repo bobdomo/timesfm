@@ -196,6 +196,15 @@ The CLI writes:
 - `quality_report.csv`
 - `run_summary.json`
 
+The run summary includes:
+
+- input mode
+- date range
+- selected frequencies and horizons
+- forecast row count
+- per-column missingness snapshot
+- warning entries for columns whose missing ratio exceeds the built-in threshold
+
 into the chosen output directory. For real TimesFM inference, install the package
 with torch support first:
 

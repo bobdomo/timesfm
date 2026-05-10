@@ -39,4 +39,11 @@ def test_build_run_summary_collects_run_metadata():
   assert actual["row_count"] == 4
   assert actual["forecast_rows"] == 2
   assert actual["quality"]["bookings_sold"]["missing_ratio"] == 0.25
+  assert actual["warnings"] == [
+    {
+      "column": "bookings_sold",
+      "severity": "warning",
+      "message": "Missing ratio 0.25 exceeds threshold 0.20.",
+    }
+  ]
   json.dumps(actual)

@@ -7,6 +7,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from .quality import build_quality_warnings
+
 
 @dataclasses.dataclass(frozen=True)
 class ForecastResult:
@@ -50,6 +52,7 @@ def build_run_summary(
   input_mode: str,
   frequencies: Iterable[str],
   horizons: dict[str, int],
+  warning_threshold: float = 0.2,
 ) -> dict[str, Any]:
   """Build a machine-readable summary for one forecasting run."""
   result_list = list(results)
@@ -61,6 +64,10 @@ def build_run_summary(
     }
     for _, row in quality_report.iterrows()
   }
+  warnings = build_quality_warnings(
+    quality_report,
+    warning_threshold=warning_threshold,
+  )
   return {
     "input_mode": input_mode,
     "row_count": int(len(dataset.index)),
@@ -72,4 +79,5 @@ def build_run_summary(
     "horizons": horizons,
     "forecast_rows": forecast_rows,
     "quality": quality,
+    "warnings": warnings,
   }
