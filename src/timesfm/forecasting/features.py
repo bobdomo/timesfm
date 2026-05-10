@@ -61,3 +61,24 @@ def align_low_frequency_covariates(
   ).sort_values("date")
   merged[list(value_columns)] = merged[list(value_columns)].ffill()
   return merged
+
+
+def align_daily_covariates(
+  daily_frame: pd.DataFrame,
+  daily_covariate_frame: pd.DataFrame,
+  *,
+  value_columns: Sequence[str],
+) -> pd.DataFrame:
+  """Align daily covariates onto a daily frame by date and forward fill."""
+  daily = daily_frame.copy()
+  daily["date"] = pd.to_datetime(daily["date"])
+  covariates = daily_covariate_frame.copy()
+  covariates["date"] = pd.to_datetime(covariates["date"])
+
+  merged = daily.merge(
+    covariates[["date", *value_columns]],
+    on="date",
+    how="left",
+  ).sort_values("date")
+  merged[list(value_columns)] = merged[list(value_columns)].ffill()
+  return merged

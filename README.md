@@ -150,7 +150,9 @@ python3 -m timesfm.forecasting.cli \
   --horizon daily=30 \
   --horizon monthly=6 \
   --malaysia-holidays data/malaysia_holidays.csv \
-  --economy-csv data/malaysia_macro.csv
+  --economy-csv data/malaysia_macro.csv \
+  --flights-csv data/flights.csv \
+  --hotels-csv data/hotels.csv
 ```
 
 Run the CLI in multi-source mode:
@@ -188,8 +190,13 @@ Example `source_spec.json`:
 }
 ```
 
-The CLI writes `forecasts.csv` into the chosen output directory. For real TimesFM
-inference, install the package with torch support first:
+The CLI writes:
+
+- `forecasts.csv`
+- `quality_report.csv`
+
+into the chosen output directory. For real TimesFM inference, install the package
+with torch support first:
 
 ```shell
 python3 -m pip install -e .[torch]
@@ -203,3 +210,7 @@ If you provide `--malaysia-holidays`, the pipeline will add:
 If you provide `--economy-csv`, the pipeline will align low-frequency indicators
 such as CPI onto the daily calendar by forward fill before forecasting. Jeddah
 winter flags are generated automatically from calendar months.
+
+If you provide `--flights-csv` or `--hotels-csv`, the pipeline will align those
+daily operational covariates by date and forward fill them into the future
+forecast window when future rows are present in the source files.

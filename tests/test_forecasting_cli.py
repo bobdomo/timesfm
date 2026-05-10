@@ -165,3 +165,63 @@ def test_cli_can_enrich_with_holidays_and_economy_inputs(tmp_path):
   first_numerical = backend.dynamic_numerical_covariates[0]["malaysia_cpi"][0]
   assert first_categorical.tolist() == [False, False, False, True, False]
   assert first_numerical.tolist() == [120.0, 120.0, 121.0, 121.0, 121.0]
+
+
+def test_cli_writes_quality_report_and_operational_covariates(tmp_path):
+  merged = pd.DataFrame(
+    {
+      "date": pd.date_range("2024-01-01", periods=3, freq="D"),
+      "bookings_sold": [10, 12, 13],
+      "actual_departures": [8, 9, 10],
+      "actual_arrivals": [7, 8, 9],
+    }
+  )
+  flights = pd.DataFrame(
+    {
+      "date": pd.to_datetime(["2024-01-02", "2024-01-04"]),
+      "flight_frequency": [2, 7],
+      "avg_flight_price": [2500.0, 2800.0],
+    }
+  )
+  hotels = pd.DataFrame(
+    {
+      "date": pd.to_datetime(["2024-01-01", "2024-01-04"]),
+      "hotel_price_makkah": [400.0, 450.0],
+      "hotel_price_madinah": [300.0, 350.0],
+    }
+  )
+  input_path = tmp_path / "merged.csv"
+  flights_path = tmp_path / "flights.csv"
+  hotels_path = tmp_path / "hotels.csv"
+  output_dir = tmp_path / "out"
+  merged.to_csv(input_path, index=False)
+  flights.to_csv(flights_path, index=False)
+  hotels.to_csv(hotels_path, index=False)
+
+  backend = FakeBackend()
+  exit_code = main(
+    [
+      "--mode",
+      "single",
+      "--input",
+      str(input_path),
+      "--output-dir",
+      str(output_dir),
+      "--frequency",
+      "daily",
+      "--horizon",
+      "daily=1",
+      "--flights-csv",
+      str(flights_path),
+      "--hotels-csv",
+      str(hotels_path),
+    ],
+    backend_factory=lambda: backend,
+  )
+
+  assert exit_code == 0
+  quality = pd.read_csv(output_dir / "quality_report.csv")
+  assert "bookings_sold" in quality["column"].tolist()
+  first_numeric = backend.dynamic_numerical_covariates[0]
+  assert first_numeric["flight_frequency"][0].tolist() == [2.0, 2.0, 2.0, 7.0]
+  assert first_numeric["hotel_price_makkah"][0].tolist() == [400.0, 400.0, 400.0, 450.0]

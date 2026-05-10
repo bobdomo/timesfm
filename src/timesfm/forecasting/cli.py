@@ -8,10 +8,15 @@ from pathlib import Path
 import pandas as pd
 
 from .backends import TimesFMBackendAdapter
-from .features import add_known_calendar_covariates, align_low_frequency_covariates
+from .features import (
+  add_known_calendar_covariates,
+  align_daily_covariates,
+  align_low_frequency_covariates,
+)
 from .ingestion import SourceCSVSpec, load_multi_csv, load_single_csv
 from .outputs import forecast_results_to_dataframe
 from .pipeline import PipelineRunConfig, TimesFMForecastingPipeline
+from .quality import build_data_quality_report
 from .schema import ForecastDataSpec
 
 
@@ -92,6 +97,8 @@ def _build_parser() -> argparse.ArgumentParser:
   parser.add_argument("--batch-size", type=int, default=8)
   parser.add_argument("--malaysia-holidays")
   parser.add_argument("--economy-csv")
+  parser.add_argument("--flights-csv")
+  parser.add_argument("--hotels-csv")
   return parser
 
 
@@ -100,13 +107,20 @@ def _enrich_with_external_covariates(
   horizons: Mapping[str, int],
   malaysia_holidays_path: str | None = None,
   economy_csv_path: str | None = None,
+  flights_csv_path: str | None = None,
+  hotels_csv_path: str | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame | None]:
   enriched = dataset.copy()
   enriched["date"] = pd.to_datetime(enriched["date"])
   max_horizon = max(horizons.values()) if horizons else 0
   future_covariates = None
 
-  if malaysia_holidays_path or economy_csv_path:
+  if (
+    malaysia_holidays_path
+    or economy_csv_path
+    or flights_csv_path
+    or hotels_csv_path
+  ):
     future_covariates = pd.DataFrame(
       {
         "date": pd.date_range(
@@ -156,6 +170,38 @@ def _enrich_with_external_covariates(
         how="left",
       )
 
+  if flights_csv_path:
+    flights = pd.read_csv(flights_csv_path)
+    flights["date"] = pd.to_datetime(flights["date"])
+    flight_columns = [column for column in flights.columns if column != "date"]
+    enriched = align_daily_covariates(
+      enriched,
+      flights,
+      value_columns=flight_columns,
+    )
+    if future_covariates is not None:
+      future_covariates = align_daily_covariates(
+        future_covariates,
+        flights,
+        value_columns=flight_columns,
+      )
+
+  if hotels_csv_path:
+    hotels = pd.read_csv(hotels_csv_path)
+    hotels["date"] = pd.to_datetime(hotels["date"])
+    hotel_columns = [column for column in hotels.columns if column != "date"]
+    enriched = align_daily_covariates(
+      enriched,
+      hotels,
+      value_columns=hotel_columns,
+    )
+    if future_covariates is not None:
+      future_covariates = align_daily_covariates(
+        future_covariates,
+        hotels,
+        value_columns=hotel_columns,
+      )
+
   return enriched, future_covariates
 
 
@@ -189,6 +235,8 @@ def main(
     horizons,
     malaysia_holidays_path=args.malaysia_holidays,
     economy_csv_path=args.economy_csv,
+    flights_csv_path=args.flights_csv,
+    hotels_csv_path=args.hotels_csv,
   )
 
   if backend_factory is None:
@@ -217,6 +265,14 @@ def main(
   output_dir = Path(args.output_dir)
   output_dir.mkdir(parents=True, exist_ok=True)
   output.to_csv(output_dir / "forecasts.csv", index=False)
+  quality_report = build_data_quality_report(
+    dataset,
+    tracked_columns=[
+      *spec.target_columns.keys(),
+      *spec.covariate_columns.keys(),
+    ],
+  )
+  quality_report.to_csv(output_dir / "quality_report.csv", index=False)
   return 0
 
 

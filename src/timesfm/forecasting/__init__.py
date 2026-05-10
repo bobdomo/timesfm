@@ -1,10 +1,15 @@
 """Forecasting utilities built around TimesFM."""
 
 from .backends import TimesFMBackendAdapter
-from .features import add_known_calendar_covariates, align_low_frequency_covariates
+from .features import (
+  add_known_calendar_covariates,
+  align_daily_covariates,
+  align_low_frequency_covariates,
+)
 from .ingestion import SourceCSVSpec, load_multi_csv, load_single_csv
 from .outputs import forecast_results_to_dataframe
 from .pipeline import ForecastResult, PipelineRunConfig, TimesFMForecastingPipeline
+from .quality import build_data_quality_report
 from .schema import ForecastDataSpec
 
 __all__ = [
@@ -15,7 +20,9 @@ __all__ = [
   "TimesFMBackendAdapter",
   "TimesFMForecastingPipeline",
   "add_known_calendar_covariates",
+  "align_daily_covariates",
   "align_low_frequency_covariates",
+  "build_data_quality_report",
   "forecast_results_to_dataframe",
   "load_multi_csv",
   "load_single_csv",
