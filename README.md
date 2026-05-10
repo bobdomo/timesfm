@@ -228,4 +228,5 @@ forecast window when future rows are present in the source files.
 
 If you provide `--future-covariates-csv`, those future rows override the
 auto-generated future covariate values and are passed directly into the forecast
-pipeline as explicit planning assumptions.
+pipeline as explicit planning assumptions. The file must contain at least as
+many rows as the largest requested forecast horizon.

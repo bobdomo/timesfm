@@ -120,6 +120,10 @@ def _enrich_with_external_covariates(
   if future_covariates_csv_path:
     future_covariates = pd.read_csv(future_covariates_csv_path)
     future_covariates["date"] = pd.to_datetime(future_covariates["date"])
+    if len(future_covariates.index) < max_horizon:
+      raise ValueError(
+        "Future covariates CSV does not have enough rows for the requested horizon."
+      )
 
   if (
     malaysia_holidays_path
@@ -236,15 +240,18 @@ def main(
   except ValueError:
     return 1
 
-  dataset, future_covariates = _enrich_with_external_covariates(
-    dataset,
-    horizons,
-    malaysia_holidays_path=args.malaysia_holidays,
-    economy_csv_path=args.economy_csv,
-    flights_csv_path=args.flights_csv,
-    hotels_csv_path=args.hotels_csv,
-    future_covariates_csv_path=args.future_covariates_csv,
-  )
+  try:
+    dataset, future_covariates = _enrich_with_external_covariates(
+      dataset,
+      horizons,
+      malaysia_holidays_path=args.malaysia_holidays,
+      economy_csv_path=args.economy_csv,
+      flights_csv_path=args.flights_csv,
+      hotels_csv_path=args.hotels_csv,
+      future_covariates_csv_path=args.future_covariates_csv,
+    )
+  except ValueError:
+    return 1
 
   if backend_factory is None:
     backend_factory = lambda: TimesFMBackendAdapter.from_pretrained(

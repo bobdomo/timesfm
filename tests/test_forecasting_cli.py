@@ -320,3 +320,45 @@ def test_cli_prefers_explicit_future_covariates_csv(tmp_path):
   first_categorical = backend.dynamic_categorical_covariates[0]["is_malaysia_holiday"][0]
   assert first_numeric.tolist() == [2.0, 2.0, 3.0, 9.0, 10.0]
   assert first_categorical.tolist() == [False, False, False, True, False]
+
+
+def test_cli_rejects_short_future_covariates_csv(tmp_path):
+  merged = pd.DataFrame(
+    {
+      "date": pd.date_range("2024-01-01", periods=3, freq="D"),
+      "bookings_sold": [10, 12, 13],
+      "actual_departures": [8, 9, 10],
+      "actual_arrivals": [7, 8, 9],
+    }
+  )
+  future_covariates = pd.DataFrame(
+    {
+      "date": pd.date_range("2024-01-04", periods=1, freq="D"),
+      "flight_frequency": [9],
+    }
+  )
+  input_path = tmp_path / "merged.csv"
+  future_path = tmp_path / "future_covariates.csv"
+  output_dir = tmp_path / "out"
+  merged.to_csv(input_path, index=False)
+  future_covariates.to_csv(future_path, index=False)
+
+  exit_code = main(
+    [
+      "--mode",
+      "single",
+      "--input",
+      str(input_path),
+      "--output-dir",
+      str(output_dir),
+      "--frequency",
+      "daily",
+      "--horizon",
+      "daily=2",
+      "--future-covariates-csv",
+      str(future_path),
+    ],
+    backend_factory=lambda: FakeBackend(),
+  )
+
+  assert exit_code == 1
