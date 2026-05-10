@@ -109,6 +109,8 @@ def test_output_rows_include_forecast_metadata():
     model_type="baseline",
     input_mode="single_csv",
     scenario_label="baseline",
+    run_id="run-123",
+    run_timestamp="2026-05-10T12:00:00Z",
     forecast_dates=pd.date_range("2024-02-01", periods=2, freq="D"),
     point_forecast=np.array([11.0, 12.0], dtype=np.float32),
     quantile_forecast=np.array(
@@ -131,6 +133,8 @@ def test_output_rows_include_forecast_metadata():
     "model_type",
     "input_mode",
     "scenario_label",
+    "run_id",
+    "run_timestamp",
   ]
   assert actual["forecast_target"].tolist() == ["bookings_sold", "bookings_sold"]
   assert actual["predicted_value"].tolist() == [11.0, 12.0]

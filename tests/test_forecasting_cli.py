@@ -266,6 +266,8 @@ def test_cli_writes_run_summary_json(tmp_path):
   summary = json.loads((output_dir / "run_summary.json").read_text())
   assert summary["input_mode"] == "single"
   assert summary["scenario_label"] == "baseline-plan"
+  assert summary["run_id"]
+  assert summary["run_timestamp"]
   assert summary["date_range"] == {
     "start": "2024-01-01",
     "end": "2024-01-03",
@@ -276,6 +278,8 @@ def test_cli_writes_run_summary_json(tmp_path):
   assert summary["quality"]["bookings_sold"]["missing_count"] == 1
   forecasts = pd.read_csv(output_dir / "forecasts.csv")
   assert forecasts["scenario_label"].unique().tolist() == ["baseline-plan"]
+  assert forecasts["run_id"].nunique() == 1
+  assert forecasts["run_timestamp"].nunique() == 1
 
 
 def test_cli_prefers_explicit_future_covariates_csv(tmp_path):

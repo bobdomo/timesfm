@@ -1,7 +1,9 @@
 """Command-line entry point for the forecasting pipeline."""
 
 import argparse
+import datetime as dt
 import json
+import uuid
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
@@ -338,11 +340,15 @@ def main(
       frequencies=frequencies,
     ),
   )
+  run_id = uuid.uuid4().hex
+  run_timestamp = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat()
   results = pipeline.run(
     dataset,
     input_mode=args.mode,
     future_covariates=future_covariates,
     scenario_label=args.scenario_label,
+    run_id=run_id,
+    run_timestamp=run_timestamp,
   )
   output = forecast_results_to_dataframe(results)
 
@@ -363,6 +369,8 @@ def main(
     frequencies=frequencies,
     horizons=horizons,
     scenario_label=args.scenario_label,
+    run_id=run_id,
+    run_timestamp=run_timestamp,
   )
   (output_dir / "run_summary.json").write_text(json.dumps(run_summary, indent=2))
   return 0

@@ -18,6 +18,8 @@ def test_build_run_summary_collects_run_metadata():
       model_type="baseline",
       input_mode="single",
       scenario_label="baseline-plan",
+      run_id="run-123",
+      run_timestamp="2026-05-10T12:00:00Z",
       forecast_dates=pd.date_range("2024-02-01", periods=2, freq="D"),
       point_forecast=np.array([1.0, 2.0], dtype=np.float32),
       quantile_forecast=np.zeros((2, 10), dtype=np.float32),
@@ -39,10 +41,14 @@ def test_build_run_summary_collects_run_metadata():
     frequencies=("daily",),
     horizons={"daily": 2},
     scenario_label="baseline-plan",
+    run_id="run-123",
+    run_timestamp="2026-05-10T12:00:00Z",
   )
 
   assert actual["input_mode"] == "single"
   assert actual["scenario_label"] == "baseline-plan"
+  assert actual["run_id"] == "run-123"
+  assert actual["run_timestamp"] == "2026-05-10T12:00:00Z"
   assert actual["row_count"] == 4
   assert actual["forecast_rows"] == 2
   assert actual["quality"]["bookings_sold"]["missing_ratio"] == 0.25
@@ -63,6 +69,8 @@ def test_forecast_results_to_dataframe_includes_scenario_label():
     model_type="baseline",
     input_mode="single",
     scenario_label="high-demand",
+    run_id="run-123",
+    run_timestamp="2026-05-10T12:00:00Z",
     forecast_dates=pd.date_range("2024-02-01", periods=1, freq="D"),
     point_forecast=np.array([1.0], dtype=np.float32),
     quantile_forecast=np.zeros((1, 10), dtype=np.float32),
@@ -71,3 +79,5 @@ def test_forecast_results_to_dataframe_includes_scenario_label():
   actual = forecast_results_to_dataframe([result])
 
   assert actual["scenario_label"].tolist() == ["high-demand"]
+  assert actual["run_id"].tolist() == ["run-123"]
+  assert actual["run_timestamp"].tolist() == ["2026-05-10T12:00:00Z"]

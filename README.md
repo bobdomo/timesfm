@@ -202,6 +202,8 @@ The run summary includes:
 
 - input mode
 - scenario label
+- run id
+- run timestamp
 - date range
 - selected frequencies and horizons
 - forecast row count

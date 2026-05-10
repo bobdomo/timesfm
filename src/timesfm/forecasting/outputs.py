@@ -19,6 +19,8 @@ class ForecastResult:
   model_type: str
   input_mode: str
   scenario_label: str | None
+  run_id: str
+  run_timestamp: str
   forecast_dates: pd.DatetimeIndex
   point_forecast: np.ndarray
   quantile_forecast: np.ndarray
@@ -41,6 +43,8 @@ def forecast_results_to_dataframe(results: Iterable[ForecastResult]) -> pd.DataF
           "model_type": result.model_type,
           "input_mode": result.input_mode,
           "scenario_label": result.scenario_label,
+          "run_id": result.run_id,
+          "run_timestamp": result.run_timestamp,
         }
       )
   return pd.DataFrame(rows)
@@ -55,6 +59,8 @@ def build_run_summary(
   frequencies: Iterable[str],
   horizons: dict[str, int],
   scenario_label: str | None = None,
+  run_id: str | None = None,
+  run_timestamp: str | None = None,
   warning_threshold: float = 0.2,
 ) -> dict[str, Any]:
   """Build a machine-readable summary for one forecasting run."""
@@ -74,6 +80,8 @@ def build_run_summary(
   return {
     "input_mode": input_mode,
     "scenario_label": scenario_label,
+    "run_id": run_id,
+    "run_timestamp": run_timestamp,
     "row_count": int(len(dataset.index)),
     "date_range": {
       "start": pd.to_datetime(dataset["date"]).min().strftime("%Y-%m-%d"),
