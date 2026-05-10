@@ -230,3 +230,19 @@ If you provide `--future-covariates-csv`, those future rows override the
 auto-generated future covariate values and are passed directly into the forecast
 pipeline as explicit planning assumptions. The file must contain at least as
 many rows as the largest requested forecast horizon.
+
+You can also generate starter templates:
+
+```shell
+python3 -m timesfm.forecasting.cli \
+  --mode single \
+  --output-dir templates \
+  --generate-template source-spec
+
+python3 -m timesfm.forecasting.cli \
+  --mode single \
+  --output-dir templates \
+  --generate-template future-covariates \
+  --template-start-date 2025-01-01 \
+  --template-horizon 30
+```

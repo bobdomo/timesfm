@@ -100,7 +100,60 @@ def _build_parser() -> argparse.ArgumentParser:
   parser.add_argument("--flights-csv")
   parser.add_argument("--hotels-csv")
   parser.add_argument("--future-covariates-csv")
+  parser.add_argument("--generate-template", choices=["source-spec", "future-covariates"])
+  parser.add_argument("--template-start-date")
+  parser.add_argument("--template-horizon", type=int, default=30)
   return parser
+
+
+def _write_source_spec_template(output_dir: Path) -> None:
+  template = {
+    "bookings": {
+      "date_column": "travel_date",
+      "column_map": {
+        "bookings_sold": "bookings",
+        "actual_departures": "departures",
+        "actual_arrivals": "arrivals",
+      },
+    },
+    "flights": {
+      "date_column": "date",
+      "column_map": {
+        "flight_frequency": "flight_count",
+        "avg_flight_price": "avg_price",
+      },
+    },
+    "hotels": {
+      "date_column": "date",
+      "column_map": {
+        "hotel_price_makkah": "hotel_price_makkah",
+        "hotel_price_madinah": "hotel_price_madinah",
+      },
+    },
+  }
+  (output_dir / "source_spec.template.json").write_text(json.dumps(template, indent=2))
+
+
+def _write_future_covariates_template(
+  output_dir: Path,
+  *,
+  start_date: str,
+  horizon: int,
+) -> None:
+  dates = pd.date_range(start_date, periods=horizon, freq="D")
+  template = pd.DataFrame(
+    {
+      "date": dates.strftime("%Y-%m-%d"),
+      "flight_frequency": [None] * horizon,
+      "avg_flight_price": [None] * horizon,
+      "is_malaysia_holiday": [None] * horizon,
+      "is_jeddah_winter": [None] * horizon,
+      "hotel_price_makkah": [None] * horizon,
+      "hotel_price_madinah": [None] * horizon,
+      "malaysia_cpi": [None] * horizon,
+    }
+  )
+  template.to_csv(output_dir / "future_covariates.template.csv", index=False)
 
 
 def _enrich_with_external_covariates(
@@ -221,6 +274,21 @@ def main(
 ) -> int:
   parser = _build_parser()
   args = parser.parse_args(argv)
+  output_dir = Path(args.output_dir)
+  output_dir.mkdir(parents=True, exist_ok=True)
+
+  if args.generate_template == "source-spec":
+    _write_source_spec_template(output_dir)
+    return 0
+  if args.generate_template == "future-covariates":
+    if not args.template_start_date:
+      return 1
+    _write_future_covariates_template(
+      output_dir,
+      start_date=args.template_start_date,
+      horizon=args.template_horizon,
+    )
+    return 0
 
   frequencies = tuple(args.frequency or ["daily", "weekly", "monthly", "yearly"])
   horizons = _parse_horizons(args.horizon or ["daily=30", "weekly=12", "monthly=6", "yearly=2"])
@@ -276,8 +344,6 @@ def main(
   )
   output = forecast_results_to_dataframe(results)
 
-  output_dir = Path(args.output_dir)
-  output_dir.mkdir(parents=True, exist_ok=True)
   output.to_csv(output_dir / "forecasts.csv", index=False)
   quality_report = build_data_quality_report(
     dataset,

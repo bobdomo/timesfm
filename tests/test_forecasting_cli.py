@@ -362,3 +362,50 @@ def test_cli_rejects_short_future_covariates_csv(tmp_path):
   )
 
   assert exit_code == 1
+
+
+def test_cli_can_generate_source_spec_template(tmp_path):
+  output_dir = tmp_path / "templates"
+
+  exit_code = main(
+    [
+      "--mode",
+      "single",
+      "--output-dir",
+      str(output_dir),
+      "--generate-template",
+      "source-spec",
+    ],
+    backend_factory=lambda: FakeBackend(),
+  )
+
+  assert exit_code == 0
+  template = json.loads((output_dir / "source_spec.template.json").read_text())
+  assert "bookings" in template
+  assert template["bookings"]["column_map"]["bookings_sold"] == "bookings"
+
+
+def test_cli_can_generate_future_covariates_template(tmp_path):
+  output_dir = tmp_path / "templates"
+
+  exit_code = main(
+    [
+      "--mode",
+      "single",
+      "--output-dir",
+      str(output_dir),
+      "--generate-template",
+      "future-covariates",
+      "--template-start-date",
+      "2025-01-01",
+      "--template-horizon",
+      "3",
+    ],
+    backend_factory=lambda: FakeBackend(),
+  )
+
+  assert exit_code == 0
+  template = pd.read_csv(output_dir / "future_covariates.template.csv")
+  assert template["date"].tolist() == ["2025-01-01", "2025-01-02", "2025-01-03"]
+  assert "flight_frequency" in template.columns
+  assert "hotel_price_makkah" in template.columns
