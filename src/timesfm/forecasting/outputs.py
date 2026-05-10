@@ -2,6 +2,7 @@
 
 import dataclasses
 from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -39,3 +40,36 @@ def forecast_results_to_dataframe(results: Iterable[ForecastResult]) -> pd.DataF
         }
       )
   return pd.DataFrame(rows)
+
+
+def build_run_summary(
+  *,
+  dataset: pd.DataFrame,
+  results: Iterable[ForecastResult],
+  quality_report: pd.DataFrame,
+  input_mode: str,
+  frequencies: Iterable[str],
+  horizons: dict[str, int],
+) -> dict[str, Any]:
+  """Build a machine-readable summary for one forecasting run."""
+  result_list = list(results)
+  forecast_rows = sum(len(result.forecast_dates) for result in result_list)
+  quality = {
+    row["column"]: {
+      "missing_count": int(row["missing_count"]),
+      "missing_ratio": float(row["missing_ratio"]),
+    }
+    for _, row in quality_report.iterrows()
+  }
+  return {
+    "input_mode": input_mode,
+    "row_count": int(len(dataset.index)),
+    "date_range": {
+      "start": pd.to_datetime(dataset["date"]).min().strftime("%Y-%m-%d"),
+      "end": pd.to_datetime(dataset["date"]).max().strftime("%Y-%m-%d"),
+    },
+    "frequencies": list(frequencies),
+    "horizons": horizons,
+    "forecast_rows": forecast_rows,
+    "quality": quality,
+  }

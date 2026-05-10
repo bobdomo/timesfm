@@ -225,3 +225,49 @@ def test_cli_writes_quality_report_and_operational_covariates(tmp_path):
   first_numeric = backend.dynamic_numerical_covariates[0]
   assert first_numeric["flight_frequency"][0].tolist() == [2.0, 2.0, 2.0, 7.0]
   assert first_numeric["hotel_price_makkah"][0].tolist() == [400.0, 400.0, 400.0, 450.0]
+
+
+def test_cli_writes_run_summary_json(tmp_path):
+  merged = pd.DataFrame(
+    {
+      "date": pd.date_range("2024-01-01", periods=3, freq="D"),
+      "bookings_sold": [10, None, 13],
+      "actual_departures": [8, 9, 10],
+      "actual_arrivals": [7, 8, 9],
+    }
+  )
+  input_path = tmp_path / "merged.csv"
+  output_dir = tmp_path / "out"
+  merged.to_csv(input_path, index=False)
+
+  exit_code = main(
+    [
+      "--mode",
+      "single",
+      "--input",
+      str(input_path),
+      "--output-dir",
+      str(output_dir),
+      "--frequency",
+      "daily",
+      "--frequency",
+      "monthly",
+      "--horizon",
+      "daily=2",
+      "--horizon",
+      "monthly=1",
+    ],
+    backend_factory=lambda: FakeBackend(),
+  )
+
+  assert exit_code == 0
+  summary = json.loads((output_dir / "run_summary.json").read_text())
+  assert summary["input_mode"] == "single"
+  assert summary["date_range"] == {
+    "start": "2024-01-01",
+    "end": "2024-01-03",
+  }
+  assert summary["frequencies"] == ["daily", "monthly"]
+  assert summary["horizons"] == {"daily": 2, "monthly": 1}
+  assert summary["forecast_rows"] > 0
+  assert summary["quality"]["bookings_sold"]["missing_count"] == 1

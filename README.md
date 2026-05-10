@@ -194,6 +194,7 @@ The CLI writes:
 
 - `forecasts.csv`
 - `quality_report.csv`
+- `run_summary.json`
 
 into the chosen output directory. For real TimesFM inference, install the package
 with torch support first:

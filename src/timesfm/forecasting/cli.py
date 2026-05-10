@@ -14,7 +14,7 @@ from .features import (
   align_low_frequency_covariates,
 )
 from .ingestion import SourceCSVSpec, load_multi_csv, load_single_csv
-from .outputs import forecast_results_to_dataframe
+from .outputs import build_run_summary, forecast_results_to_dataframe
 from .pipeline import PipelineRunConfig, TimesFMForecastingPipeline
 from .quality import build_data_quality_report
 from .schema import ForecastDataSpec
@@ -273,6 +273,15 @@ def main(
     ],
   )
   quality_report.to_csv(output_dir / "quality_report.csv", index=False)
+  run_summary = build_run_summary(
+    dataset=dataset,
+    results=results,
+    quality_report=quality_report,
+    input_mode=args.mode,
+    frequencies=frequencies,
+    horizons=horizons,
+  )
+  (output_dir / "run_summary.json").write_text(json.dumps(run_summary, indent=2))
   return 0
 
 
