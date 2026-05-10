@@ -256,6 +256,8 @@ def test_cli_writes_run_summary_json(tmp_path):
       "daily=2",
       "--horizon",
       "monthly=1",
+      "--scenario-label",
+      "baseline-plan",
     ],
     backend_factory=lambda: FakeBackend(),
   )
@@ -263,6 +265,7 @@ def test_cli_writes_run_summary_json(tmp_path):
   assert exit_code == 0
   summary = json.loads((output_dir / "run_summary.json").read_text())
   assert summary["input_mode"] == "single"
+  assert summary["scenario_label"] == "baseline-plan"
   assert summary["date_range"] == {
     "start": "2024-01-01",
     "end": "2024-01-03",
@@ -271,6 +274,8 @@ def test_cli_writes_run_summary_json(tmp_path):
   assert summary["horizons"] == {"daily": 2, "monthly": 1}
   assert summary["forecast_rows"] > 0
   assert summary["quality"]["bookings_sold"]["missing_count"] == 1
+  forecasts = pd.read_csv(output_dir / "forecasts.csv")
+  assert forecasts["scenario_label"].unique().tolist() == ["baseline-plan"]
 
 
 def test_cli_prefers_explicit_future_covariates_csv(tmp_path):

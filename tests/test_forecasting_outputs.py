@@ -3,7 +3,11 @@ import json
 import numpy as np
 import pandas as pd
 
-from timesfm.forecasting.outputs import ForecastResult, build_run_summary
+from timesfm.forecasting.outputs import (
+  ForecastResult,
+  build_run_summary,
+  forecast_results_to_dataframe,
+)
 
 
 def test_build_run_summary_collects_run_metadata():
@@ -13,6 +17,7 @@ def test_build_run_summary_collects_run_metadata():
       frequency="daily",
       model_type="baseline",
       input_mode="single",
+      scenario_label="baseline-plan",
       forecast_dates=pd.date_range("2024-02-01", periods=2, freq="D"),
       point_forecast=np.array([1.0, 2.0], dtype=np.float32),
       quantile_forecast=np.zeros((2, 10), dtype=np.float32),
@@ -33,9 +38,11 @@ def test_build_run_summary_collects_run_metadata():
     input_mode="single",
     frequencies=("daily",),
     horizons={"daily": 2},
+    scenario_label="baseline-plan",
   )
 
   assert actual["input_mode"] == "single"
+  assert actual["scenario_label"] == "baseline-plan"
   assert actual["row_count"] == 4
   assert actual["forecast_rows"] == 2
   assert actual["quality"]["bookings_sold"]["missing_ratio"] == 0.25
@@ -47,3 +54,20 @@ def test_build_run_summary_collects_run_metadata():
     }
   ]
   json.dumps(actual)
+
+
+def test_forecast_results_to_dataframe_includes_scenario_label():
+  result = ForecastResult(
+    target="bookings_sold",
+    frequency="daily",
+    model_type="baseline",
+    input_mode="single",
+    scenario_label="high-demand",
+    forecast_dates=pd.date_range("2024-02-01", periods=1, freq="D"),
+    point_forecast=np.array([1.0], dtype=np.float32),
+    quantile_forecast=np.zeros((1, 10), dtype=np.float32),
+  )
+
+  actual = forecast_results_to_dataframe([result])
+
+  assert actual["scenario_label"].tolist() == ["high-demand"]

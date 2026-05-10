@@ -100,6 +100,7 @@ def _build_parser() -> argparse.ArgumentParser:
   parser.add_argument("--flights-csv")
   parser.add_argument("--hotels-csv")
   parser.add_argument("--future-covariates-csv")
+  parser.add_argument("--scenario-label")
   parser.add_argument("--generate-template", choices=["source-spec", "future-covariates"])
   parser.add_argument("--template-start-date")
   parser.add_argument("--template-horizon", type=int, default=30)
@@ -341,6 +342,7 @@ def main(
     dataset,
     input_mode=args.mode,
     future_covariates=future_covariates,
+    scenario_label=args.scenario_label,
   )
   output = forecast_results_to_dataframe(results)
 
@@ -360,6 +362,7 @@ def main(
     input_mode=args.mode,
     frequencies=frequencies,
     horizons=horizons,
+    scenario_label=args.scenario_label,
   )
   (output_dir / "run_summary.json").write_text(json.dumps(run_summary, indent=2))
   return 0

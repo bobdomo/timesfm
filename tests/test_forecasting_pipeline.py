@@ -108,6 +108,7 @@ def test_output_rows_include_forecast_metadata():
     frequency="daily",
     model_type="baseline",
     input_mode="single_csv",
+    scenario_label="baseline",
     forecast_dates=pd.date_range("2024-02-01", periods=2, freq="D"),
     point_forecast=np.array([11.0, 12.0], dtype=np.float32),
     quantile_forecast=np.array(
@@ -129,6 +130,7 @@ def test_output_rows_include_forecast_metadata():
     "upper_90",
     "model_type",
     "input_mode",
+    "scenario_label",
   ]
   assert actual["forecast_target"].tolist() == ["bookings_sold", "bookings_sold"]
   assert actual["predicted_value"].tolist() == [11.0, 12.0]

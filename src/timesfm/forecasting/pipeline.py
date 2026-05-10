@@ -70,6 +70,7 @@ class TimesFMForecastingPipeline:
     dataset: pd.DataFrame,
     input_mode: str = "single_csv",
     future_covariates: pd.DataFrame | None = None,
+    scenario_label: str | None = None,
   ) -> list[ForecastResult]:
     canonical = build_canonical_daily_table(dataset, self.spec)
     results: list[ForecastResult] = []
@@ -102,6 +103,7 @@ class TimesFMForecastingPipeline:
             frequency=frequency,
             model_type="baseline",
             input_mode=input_mode,
+            scenario_label=scenario_label,
             forecast_dates=forecast_dates,
             point_forecast=baseline_point[0],
             quantile_forecast=baseline_quantiles[0],
@@ -120,6 +122,7 @@ class TimesFMForecastingPipeline:
             frequency=frequency,
             model_type="covariates",
             input_mode=input_mode,
+            scenario_label=scenario_label,
             forecast_dates=forecast_dates,
             point_forecast=cov_point[0],
             quantile_forecast=cov_quantiles[0],

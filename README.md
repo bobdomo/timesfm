@@ -145,6 +145,7 @@ python3 -m timesfm.forecasting.cli \
   --mode single \
   --input merged.csv \
   --output-dir out \
+  --scenario-label high-demand \
   --frequency daily \
   --frequency monthly \
   --horizon daily=30 \
@@ -200,6 +201,7 @@ The CLI writes:
 The run summary includes:
 
 - input mode
+- scenario label
 - date range
 - selected frequencies and horizons
 - forecast row count
