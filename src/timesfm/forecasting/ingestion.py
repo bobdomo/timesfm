@@ -26,10 +26,13 @@ def _rename_to_canonical(
   date_column: str,
   column_map: Mapping[str, str],
 ) -> pd.DataFrame:
-  rename_map = {date_column: "date"} | {source: canonical for canonical, source in column_map.items()}
-  missing = [source for source in rename_map if source not in df.columns]
-  if missing:
-    raise ValueError(f"Missing required columns: {missing}")
+  if date_column not in df.columns:
+    raise ValueError(f"Missing required date column: {date_column}")
+  rename_map = {date_column: "date"} | {
+    source: canonical
+    for canonical, source in column_map.items()
+    if source in df.columns
+  }
   output = df.rename(columns=rename_map)[list(rename_map.values())].copy()
   output["date"] = pd.to_datetime(output["date"])
   return output.sort_values("date").reset_index(drop=True)
