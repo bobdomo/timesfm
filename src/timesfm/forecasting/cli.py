@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from .backends import TimesFMBackendAdapter
 from .ingestion import SourceCSVSpec, load_multi_csv, load_single_csv
 from .outputs import forecast_results_to_dataframe
 from .pipeline import PipelineRunConfig, TimesFMForecastingPipeline
@@ -84,6 +85,10 @@ def _build_parser() -> argparse.ArgumentParser:
   parser.add_argument("--output-dir", required=True)
   parser.add_argument("--frequency", action="append", default=[])
   parser.add_argument("--horizon", action="append", default=[])
+  parser.add_argument("--model-id", default="google/timesfm-2.5-200m-pytorch")
+  parser.add_argument("--max-context", type=int, default=1024)
+  parser.add_argument("--max-horizon", type=int, default=256)
+  parser.add_argument("--batch-size", type=int, default=8)
   return parser
 
 
@@ -113,7 +118,12 @@ def main(
     return 1
 
   if backend_factory is None:
-    raise ValueError("A backend_factory is required to run the forecasting CLI.")
+    backend_factory = lambda: TimesFMBackendAdapter.from_pretrained(
+      args.model_id,
+      max_context=args.max_context,
+      max_horizon=args.max_horizon,
+      per_core_batch_size=args.batch_size,
+    )
 
   pipeline = TimesFMForecastingPipeline(
     backend=backend_factory(),

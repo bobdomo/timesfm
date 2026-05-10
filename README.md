@@ -125,3 +125,70 @@ point_forecast, quantile_forecast = model.forecast(
 point_forecast.shape  # (2, 12)
 quantile_forecast.shape  # (2, 12, 10): mean, then 10th to 90th quantiles.
 ```
+
+### Forecasting Pipeline
+
+This repository now includes a production-style forecasting pipeline for
+calendar-aligned demand data such as Umrah bookings, departures, and arrivals.
+The pipeline supports:
+
+- single merged CSV ingestion
+- multiple source CSV ingestion through a JSON source-spec file
+- canonical daily table generation
+- daily, weekly, monthly, and yearly forecast views
+- baseline TimesFM forecasts and covariate-aware forecasts
+
+Run the CLI in single-file mode:
+
+```shell
+python3 -m timesfm.forecasting.cli \
+  --mode single \
+  --input merged.csv \
+  --output-dir out \
+  --frequency daily \
+  --frequency monthly \
+  --horizon daily=30 \
+  --horizon monthly=6
+```
+
+Run the CLI in multi-source mode:
+
+```shell
+python3 -m timesfm.forecasting.cli \
+  --mode multi \
+  --source bookings=data/bookings.csv \
+  --source flights=data/flights.csv \
+  --source-spec config/source_spec.json \
+  --output-dir out \
+  --frequency daily \
+  --horizon daily=30
+```
+
+Example `source_spec.json`:
+
+```json
+{
+  "bookings": {
+    "date_column": "travel_date",
+    "column_map": {
+      "bookings_sold": "bookings",
+      "actual_departures": "departures",
+      "actual_arrivals": "arrivals"
+    }
+  },
+  "flights": {
+    "date_column": "date",
+    "column_map": {
+      "flight_frequency": "flight_count",
+      "avg_flight_price": "avg_price"
+    }
+  }
+}
+```
+
+The CLI writes `forecasts.csv` into the chosen output directory. For real TimesFM
+inference, install the package with torch support first:
+
+```shell
+python3 -m pip install -e .[torch]
+```
