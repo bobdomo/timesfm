@@ -152,7 +152,8 @@ python3 -m timesfm.forecasting.cli \
   --malaysia-holidays data/malaysia_holidays.csv \
   --economy-csv data/malaysia_macro.csv \
   --flights-csv data/flights.csv \
-  --hotels-csv data/hotels.csv
+  --hotels-csv data/hotels.csv \
+  --future-covariates-csv data/future_covariates.csv
 ```
 
 Run the CLI in multi-source mode:
@@ -224,3 +225,7 @@ winter flags are generated automatically from calendar months.
 If you provide `--flights-csv` or `--hotels-csv`, the pipeline will align those
 daily operational covariates by date and forward fill them into the future
 forecast window when future rows are present in the source files.
+
+If you provide `--future-covariates-csv`, those future rows override the
+auto-generated future covariate values and are passed directly into the forecast
+pipeline as explicit planning assumptions.

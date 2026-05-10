@@ -152,9 +152,16 @@ class TimesFMForecastingPipeline:
       future_frame["date"] = pd.to_datetime(future_frame["date"])
       future_frame = future_frame.sort_values("date").reset_index(drop=True)
     for column in self.spec.covariate_columns:
-      if column not in table.columns:
+      if column in table.columns:
+        history = table[column].ffill().bfill()
+      elif future_frame is not None and column in future_frame.columns:
+        future_dtype = future_frame[column]
+        if pd_types.is_bool_dtype(future_dtype) or pd_types.is_object_dtype(future_dtype):
+          history = pd.Series([False] * len(table.index))
+        else:
+          history = pd.Series([0.0] * len(table.index))
+      else:
         continue
-      history = table[column].ffill().bfill()
       if history.isna().all():
         continue
       if future_frame is not None and column in future_frame.columns:

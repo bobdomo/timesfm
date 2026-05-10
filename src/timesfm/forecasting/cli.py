@@ -99,6 +99,7 @@ def _build_parser() -> argparse.ArgumentParser:
   parser.add_argument("--economy-csv")
   parser.add_argument("--flights-csv")
   parser.add_argument("--hotels-csv")
+  parser.add_argument("--future-covariates-csv")
   return parser
 
 
@@ -109,18 +110,23 @@ def _enrich_with_external_covariates(
   economy_csv_path: str | None = None,
   flights_csv_path: str | None = None,
   hotels_csv_path: str | None = None,
+  future_covariates_csv_path: str | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame | None]:
   enriched = dataset.copy()
   enriched["date"] = pd.to_datetime(enriched["date"])
   max_horizon = max(horizons.values()) if horizons else 0
   future_covariates = None
 
+  if future_covariates_csv_path:
+    future_covariates = pd.read_csv(future_covariates_csv_path)
+    future_covariates["date"] = pd.to_datetime(future_covariates["date"])
+
   if (
     malaysia_holidays_path
     or economy_csv_path
     or flights_csv_path
     or hotels_csv_path
-  ):
+  ) and future_covariates is None:
     future_covariates = pd.DataFrame(
       {
         "date": pd.date_range(
@@ -237,6 +243,7 @@ def main(
     economy_csv_path=args.economy_csv,
     flights_csv_path=args.flights_csv,
     hotels_csv_path=args.hotels_csv,
+    future_covariates_csv_path=args.future_covariates_csv,
   )
 
   if backend_factory is None:
