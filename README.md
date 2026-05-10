@@ -148,7 +148,9 @@ python3 -m timesfm.forecasting.cli \
   --frequency daily \
   --frequency monthly \
   --horizon daily=30 \
-  --horizon monthly=6
+  --horizon monthly=6 \
+  --malaysia-holidays data/malaysia_holidays.csv \
+  --economy-csv data/malaysia_macro.csv
 ```
 
 Run the CLI in multi-source mode:
@@ -192,3 +194,12 @@ inference, install the package with torch support first:
 ```shell
 python3 -m pip install -e .[torch]
 ```
+
+If you provide `--malaysia-holidays`, the pipeline will add:
+
+- `is_malaysia_holiday`
+- `holiday_name`
+
+If you provide `--economy-csv`, the pipeline will align low-frequency indicators
+such as CPI onto the daily calendar by forward fill before forecasting. Jeddah
+winter flags are generated automatically from calendar months.

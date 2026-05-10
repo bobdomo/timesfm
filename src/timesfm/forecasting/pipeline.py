@@ -69,6 +69,7 @@ class TimesFMForecastingPipeline:
     self,
     dataset: pd.DataFrame,
     input_mode: str = "single_csv",
+    future_covariates: pd.DataFrame | None = None,
   ) -> list[ForecastResult]:
     canonical = build_canonical_daily_table(dataset, self.spec)
     results: list[ForecastResult] = []
@@ -83,7 +84,11 @@ class TimesFMForecastingPipeline:
       if table.empty:
         continue
       forecast_dates = self._future_dates(table["date"], frequency, horizon)
-      covariates = self._future_covariates(table, horizon)
+      covariates = self._future_covariates(
+        table,
+        horizon,
+        future_covariates=future_covariates,
+      )
 
       for target in self.spec.target_columns:
         target_values = table[target].dropna().to_numpy(dtype=np.float32)
@@ -137,16 +142,25 @@ class TimesFMForecastingPipeline:
     self,
     table: pd.DataFrame,
     horizon: int,
+    future_covariates: pd.DataFrame | None = None,
   ) -> dict[str, dict[str, list[np.ndarray]]]:
     numerical: dict[str, list[np.ndarray]] = {}
     categorical: dict[str, list[np.ndarray]] = {}
+    future_frame = None
+    if future_covariates is not None:
+      future_frame = future_covariates.copy()
+      future_frame["date"] = pd.to_datetime(future_frame["date"])
+      future_frame = future_frame.sort_values("date").reset_index(drop=True)
     for column in self.spec.covariate_columns:
       if column not in table.columns:
         continue
       history = table[column].ffill().bfill()
       if history.isna().all():
         continue
-      future = pd.Series([history.iloc[-1]] * horizon)
+      if future_frame is not None and column in future_frame.columns:
+        future = future_frame[column].iloc[:horizon]
+      else:
+        future = pd.Series([history.iloc[-1]] * horizon)
       values = np.concatenate(
         [
           history.to_numpy(),

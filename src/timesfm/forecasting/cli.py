@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 
 from .backends import TimesFMBackendAdapter
+from .features import add_known_calendar_covariates, align_low_frequency_covariates
 from .ingestion import SourceCSVSpec, load_multi_csv, load_single_csv
 from .outputs import forecast_results_to_dataframe
 from .pipeline import PipelineRunConfig, TimesFMForecastingPipeline
@@ -89,7 +90,73 @@ def _build_parser() -> argparse.ArgumentParser:
   parser.add_argument("--max-context", type=int, default=1024)
   parser.add_argument("--max-horizon", type=int, default=256)
   parser.add_argument("--batch-size", type=int, default=8)
+  parser.add_argument("--malaysia-holidays")
+  parser.add_argument("--economy-csv")
   return parser
+
+
+def _enrich_with_external_covariates(
+  dataset: pd.DataFrame,
+  horizons: Mapping[str, int],
+  malaysia_holidays_path: str | None = None,
+  economy_csv_path: str | None = None,
+) -> tuple[pd.DataFrame, pd.DataFrame | None]:
+  enriched = dataset.copy()
+  enriched["date"] = pd.to_datetime(enriched["date"])
+  max_horizon = max(horizons.values()) if horizons else 0
+  future_covariates = None
+
+  if malaysia_holidays_path or economy_csv_path:
+    future_covariates = pd.DataFrame(
+      {
+        "date": pd.date_range(
+          enriched["date"].max() + pd.Timedelta(days=1),
+          periods=max_horizon,
+          freq="D",
+        )
+      }
+    )
+
+  holiday_frame = None
+  if malaysia_holidays_path:
+    holiday_frame = pd.read_csv(malaysia_holidays_path)
+    holiday_frame["date"] = pd.to_datetime(holiday_frame["date"])
+    enriched = add_known_calendar_covariates(
+      enriched,
+      malaysia_holidays=holiday_frame,
+    )
+    if future_covariates is not None:
+      future_covariates = add_known_calendar_covariates(
+        future_covariates,
+        malaysia_holidays=holiday_frame,
+      )
+
+  if economy_csv_path:
+    economy = pd.read_csv(economy_csv_path)
+    economy["date"] = pd.to_datetime(economy["date"])
+    value_columns = [column for column in economy.columns if column != "date"]
+    enriched = align_low_frequency_covariates(
+      enriched,
+      economy,
+      value_columns=value_columns,
+    )
+    if future_covariates is not None:
+      combined = pd.concat(
+        [enriched[["date"]], future_covariates[["date"]]],
+        ignore_index=True,
+      )
+      aligned = align_low_frequency_covariates(
+        combined,
+        economy,
+        value_columns=value_columns,
+      )
+      future_covariates = future_covariates.merge(
+        aligned,
+        on="date",
+        how="left",
+      )
+
+  return enriched, future_covariates
 
 
 def main(
@@ -117,6 +184,13 @@ def main(
   except ValueError:
     return 1
 
+  dataset, future_covariates = _enrich_with_external_covariates(
+    dataset,
+    horizons,
+    malaysia_holidays_path=args.malaysia_holidays,
+    economy_csv_path=args.economy_csv,
+  )
+
   if backend_factory is None:
     backend_factory = lambda: TimesFMBackendAdapter.from_pretrained(
       args.model_id,
@@ -133,7 +207,11 @@ def main(
       frequencies=frequencies,
     ),
   )
-  results = pipeline.run(dataset, input_mode=args.mode)
+  results = pipeline.run(
+    dataset,
+    input_mode=args.mode,
+    future_covariates=future_covariates,
+  )
   output = forecast_results_to_dataframe(results)
 
   output_dir = Path(args.output_dir)

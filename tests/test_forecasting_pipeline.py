@@ -14,6 +14,8 @@ class FakeBackend:
 
   def __init__(self):
     self.calls = []
+    self.dynamic_numerical_covariates = []
+    self.dynamic_categorical_covariates = []
 
   def forecast(self, horizon, inputs):
     self.calls.append(("forecast", horizon, len(inputs)))
@@ -34,6 +36,8 @@ class FakeBackend:
     static_categorical_covariates=None,
   ):
     self.calls.append(("forecast_with_covariates", horizon, len(inputs)))
+    self.dynamic_numerical_covariates.append(dynamic_numerical_covariates or {})
+    self.dynamic_categorical_covariates.append(dynamic_categorical_covariates or {})
     point = np.full((len(inputs), horizon), 21.0, dtype=np.float32)
     quantiles = np.zeros((len(inputs), horizon, 10), dtype=np.float32)
     quantiles[:, :, 1] = 20.0
@@ -129,3 +133,54 @@ def test_output_rows_include_forecast_metadata():
   assert actual["forecast_target"].tolist() == ["bookings_sold", "bookings_sold"]
   assert actual["predicted_value"].tolist() == [11.0, 12.0]
   assert actual["lower_90"].tolist() == [10.0, 11.0]
+
+
+def test_pipeline_uses_supplied_future_covariates_when_present():
+  dataset = pd.DataFrame(
+    {
+      "date": pd.date_range("2024-01-01", periods=3, freq="D"),
+      "bookings_sold": [10, 11, 12],
+      "actual_departures": [8, 9, 10],
+      "actual_arrivals": [7, 8, 9],
+      "flight_frequency": [2, 2, 3],
+      "is_malaysia_holiday": [False, False, False],
+    }
+  )
+  future_covariates = pd.DataFrame(
+    {
+      "date": pd.date_range("2024-01-04", periods=2, freq="D"),
+      "flight_frequency": [7, 8],
+      "is_malaysia_holiday": [True, False],
+    }
+  )
+  spec = ForecastDataSpec(
+    target_columns={
+      "bookings_sold": "bookings_sold",
+      "actual_departures": "actual_departures",
+      "actual_arrivals": "actual_arrivals",
+    },
+    covariate_columns={
+      "flight_frequency": "flight_frequency",
+      "is_malaysia_holiday": "is_malaysia_holiday",
+    },
+    aggregation_rules={
+      "bookings_sold": "sum",
+      "actual_departures": "sum",
+      "actual_arrivals": "sum",
+      "flight_frequency": "sum",
+      "is_malaysia_holiday": "max",
+    },
+  )
+  backend = FakeBackend()
+  pipeline = TimesFMForecastingPipeline(
+    backend=backend,
+    spec=spec,
+    config=PipelineRunConfig(horizons={"daily": 2}, frequencies=("daily",)),
+  )
+
+  pipeline.run(dataset, input_mode="single_csv", future_covariates=future_covariates)
+
+  first_numeric = backend.dynamic_numerical_covariates[0]["flight_frequency"][0]
+  first_categorical = backend.dynamic_categorical_covariates[0]["is_malaysia_holiday"][0]
+  assert first_numeric.tolist() == [2.0, 2.0, 3.0, 7.0, 8.0]
+  assert first_categorical.tolist() == [False, False, False, True, False]
